@@ -16,10 +16,17 @@ export default function Feed() {
   }, [searchTerm]);
 
   const fetchNews = async () => {
-    const apiKey = import.meta.env.VITE_NEWS_API_KEY; 
-    const url = debouncedSearch
-      ? `https://newsapi.org/v2/everything?q=${debouncedSearch}&pageSize=${limit}&apiKey=${apiKey}`
-      : `https://newsapi.org/v2/top-headlines?country=us&category=${category}&pageSize=${limit}&apiKey=${apiKey}`;
+    const isLocalHost = import.meta.env.DEV; 
+    let url;
+
+    if (isLocalHost) {
+      const apiKey = import.meta.env.VITE_NEWS_API_KEY; 
+      url = debouncedSearch
+        ? `https://newsapi.org/v2/everything?q=${debouncedSearch}&pageSize=${limit}&apiKey=${apiKey}`
+        : `https://newsapi.org/v2/top-headlines?country=us&category=${category}&pageSize=${limit}&apiKey=${apiKey}`;
+    } else {
+      url = `/.netlify/functions/news?limit=${limit}&category=${category}&search=${debouncedSearch}`;
+    }
     
     const res = await fetch(url);
     if (!res.ok) throw new Error('API failed');

@@ -31,13 +31,14 @@ A modern, responsive multi-screen news reading application built for a React Dev
    To adhere to DRY (Don't Repeat Yourself) principles, I extracted the complex UI for the article cards into a reusable component. I also implemented a `SkeletonCard` component to display a pulsing, layout-matching placeholder while React Query fetches data. This drastically improves the perceived performance and UX compared to a basic text loading state.
 
 ## Challenge Faced
-**Implementing the 5-Second Bulk Undo Delete**
-The requirement to delete multiple bookmarks but offer a 5-second "Undo" window was tricky. If I immediately removed the items from the global Zustand store, undoing it would mean having to re-insert them (potentially losing their original order or requiring complex history tracking). However, they needed to disappear from the UI instantly so the user felt their action was acknowledged.
+**Production API Restrictions (CORS / 426 Error)**
+During deployment, I encountered a critical issue: NewsAPI recently updated their Free Tier rules to aggressively block requests coming from deployed production domains. While the app worked perfectly on `localhost`, deploying it to Netlify resulted in the browser blocking the fetch requests entirely. This meant the app would crash in production despite the code being completely valid.
 
 ## How I Solved It
-Process: I decided to decouple the *visual* deletion from the *actual* data deletion.
-1. When the user clicks "Delete Selected", I move the selected URLs into a local `pendingDeletes` state array rather than removing them from the global store. 
-2. In the render method, I filter out any articles that are in `pendingDeletes`. This makes them instantly vanish from the screen.
-3. I use a `useRef` to store a `setTimeout` for 5 seconds. If the timer finishes, it triggers the actual `removeBookmarks` action in the Zustand store and clears the local pending state.
-4. If the user clicks "Undo" before the 5 seconds are up, I simply run `clearTimeout()` on the ref and empty the `pendingDeletes` array, which makes the items instantly reappear in the UI. 
-5. Finally, I added a `useEffect` cleanup function to ensure that if the user navigates away from the Bookmarks page while the 5-second timer is still ticking, the deletion is officially committed to the global store rather than lost.
+I bypassed the client-side browser restrictions by building a Backend-for-Frontend (BFF) proxy using **Netlify Serverless Functions**. 
+
+1. I created a Node.js serverless function (`netlify/functions/news.js`) to handle the actual communication with NewsAPI. Since the request now comes from a backend server instead of a browser, NewsAPI accepts it.
+2. I moved the `VITE_NEWS_API_KEY` out of the Vite environment and into Netlify's secure backend environment variables. This had the added bonus of completely hiding the API key from the client's network tab, drastically improving security.
+3. I updated the React `fetchNews` function to call my local serverless endpoint (`/.netlify/functions/news`) instead of the external NewsAPI URL. 
+
+This solution not only fixed the deployment crash but also resulted in a much more secure and production-ready architecture.
