@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import ArticleCard from '../components/ArticleCard';
 import SkeletonCard from '../components/SkeletonCard';
+import { mockArticles } from '../data/mockArticles';
 
 export default function Feed() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -28,12 +29,20 @@ export default function Feed() {
       url = `/.netlify/functions/news?limit=${limit}&category=${category}&search=${debouncedSearch}`;
     }
     
-    const res = await fetch(url);
-    if (!res.ok) throw new Error('API failed');
-    const data = await res.json();
-    
-    setLastUpdated(new Date().toLocaleTimeString());
-    return data.articles;
+    try {
+      const res = await fetch(url);
+      
+      if (!res.ok) throw new Error('API blocked or failed');
+      
+      const data = await res.json();
+      setLastUpdated(new Date().toLocaleTimeString());
+      return data.articles;
+
+    } catch (error) {
+      console.warn("Using fallback UI due to API restriction:", error);
+      setLastUpdated(new Date().toLocaleTimeString() + " (Offline Mode)");
+      return mockArticles;
+    }
   };
 
   const { data: articles, isError, isLoading } = useQuery({
